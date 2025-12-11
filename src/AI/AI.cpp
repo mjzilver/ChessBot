@@ -15,6 +15,8 @@
 
 void AI::makeMove(ChessBoard* board, const bool isWhite) {
     startTime = std::chrono::steady_clock::now();
+    searchRootIsWhite = isWhite;
+
     Move bestMove = findBestMove(board, isWhite);
 
     if (!board->movePiece(bestMove.fromX, bestMove.fromY, bestMove.toX, bestMove.toY)) {
@@ -45,8 +47,13 @@ Move AI::findBestMove(const ChessBoard* const board, const bool isWhite) {
     for (const auto& move : moves) {
         threadpool.submit([&, move]() {
             ChessBoard* newBoard = new ChessBoard(*board);
+
+            auto captured = newBoard->getPieceTypeAt(move.toX, move.toY);
             newBoard->movePiece(move.fromX, move.fromY, move.toX, move.toY);
-            float score = minimax(newBoard, maxDepth, -10000.0f, 10000.0f, isWhite, !isWhite);
+
+            bool nextIsWhite = !isWhite;
+            float score = minimax(newBoard, maxDepth - 1, -1e9f, 1e9f, nextIsWhite);
+
             delete newBoard;
 
             {
@@ -133,8 +140,7 @@ std::vector<Move> AI::generateMoves(const ChessBoard* const board, const bool is
     return availableMoves;
 }
 
-float AI::minimax(ChessBoard* const board, const int depth, float alpha, float beta, const bool maximizingPlayer,
-                  const bool isWhite) {
+float AI::minimax(ChessBoard* const board, const int depth, float alpha, float beta, const bool isWhiteToMove) {
     if (depth == 0) {
         return evaluatePosition(board);
     }
@@ -145,28 +151,29 @@ float AI::minimax(ChessBoard* const board, const int depth, float alpha, float b
         return evaluatePosition(board);
     }
 
-    float bestScore = maximizingPlayer ? -10000 : 10000;
+    const bool maximizingPlayer = (isWhiteToMove == searchRootIsWhite);
+    float bestScore = maximizingPlayer ? -1e9f : 1e9f;
 
-    auto moves = generateMoves(board, isWhite);
+    auto moves = generateMoves(board, isWhiteToMove);
 
     for (const auto& move : moves) {
-        auto piece = board->getPieceTypeAt(move.toX, move.toY);
+        auto captured = board->getPieceTypeAt(move.toX, move.toY);
         board->movePiece(move.fromX, move.fromY, move.toX, move.toY);
 
-        float score = minimax(board, depth - 1, alpha, beta, !maximizingPlayer, !isWhite);
+        float score = minimax(board, depth - 1, alpha, beta, !isWhiteToMove);
 
-        board->undoMove(move.fromX, move.fromY, move.toX, move.toY, piece);
+        board->undoMove(move.fromX, move.fromY, move.toX, move.toY, captured);
 
         if (maximizingPlayer) {
-            bestScore = std::max(bestScore, score);
-            alpha = std::max(alpha, bestScore);
+            if (score > bestScore) bestScore = score;
+            if (score > alpha) alpha = score;
         } else {
-            bestScore = std::min(bestScore, score);
-            beta = std::min(beta, bestScore);
+            if (score < bestScore) bestScore = score;
+            if (score < beta) beta = score;
         }
 
         if (beta <= alpha) {
-            break;  // Prune the search tree
+            break;  // alpha-beta cutoff
         }
     }
 
@@ -197,7 +204,8 @@ float AI::evaluatePosition(const ChessBoard* const board) const {
     whiteScore = evaluatePieces(board->getBoard(ChessBoard::WHITE), ChessBoard::WHITE);
     blackScore = evaluatePieces(board->getBoard(ChessBoard::BLACK), ChessBoard::BLACK);
 
-    return blackScore - whiteScore;
+    float score = whiteScore - blackScore;
+    return searchRootIsWhite ? score : -score;
 }
 
 int AI::piecePositionScore(const int x, const int y, const PieceType type, const bool isWhite) const {
@@ -223,18 +231,18 @@ int AI::piecePositionScore(const int x, const int y, const PieceType type, const
 float AI::getValueForPiece(const PieceType piece) const {
     switch (piece) {
         case PAWN:
-            return 30.0f;
+            return 100;
         case KNIGHT:
-            return 70.0f;
+            return 320;
         case BISHOP:
-            return 70.0f;
+            return 330;
         case ROOK:
-            return 10.0f;
+            return 500;
         case QUEEN:
-            return 200.0f;
+            return 900;
         case KING:
-            return 2000.0f;
+            return 20000;
         default:
-            return 0.0f;
+            return 0;
     }
 }

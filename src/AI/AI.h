@@ -27,6 +27,7 @@ private:
     const int maxDepth;
     const int timeLimit;
     uint64_t cacheHitCount = 0;
+    bool searchRootIsWhite;
 
     ThreadPool threadpool;
 
@@ -41,8 +42,7 @@ private:
     float evaluatePosition(const ChessBoard* const board) const;
     int piecePositionScore(const int x, const int y, const PieceType type, const bool isWhite) const;
     float getValueForPiece(const PieceType piece) const;
-    float minimax(ChessBoard* const board, const int depth, float alpha, float beta, const bool maximizingPlayer,
-                  const bool isWhite);
+    float minimax(ChessBoard* const board, const int depth, float alpha, float beta, const bool isWhiteToMove);
 
     // move generation
     std::vector<Move> generateMoves(const ChessBoard* const board, const bool isWhite);

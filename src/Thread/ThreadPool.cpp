@@ -25,23 +25,26 @@ void ThreadPool::workerLoop() {
     while (true) {
         std::function<void()> task;
 
-        std::unique_lock<std::mutex> lock(queueMutex);
-        cv.wait(lock, [this] { return !tasks.empty() || stop; });
+        {
+            std::unique_lock<std::mutex> lock(queueMutex);
+            cv.wait(lock, [this] { return !tasks.empty() || stop; });
 
-        if (stop && tasks.empty()) return;
+            if (stop && tasks.empty()) return;
 
-        task = std::move(tasks.front());
-        tasks.pop();
-        lock.unlock();
+            task = std::move(tasks.front());
+            tasks.pop();
+        }
 
         task();
+
+        cv.notify_all();
     }
 }
 
 ThreadPool::~ThreadPool() {
     stop = true;
     cv.notify_all();
-    for (auto &thread : workers) {
+    for (auto& thread : workers) {
         if (thread.joinable()) thread.join();
     }
 }
