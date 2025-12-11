@@ -1,5 +1,5 @@
 TARGET = CppChess
-BUILD_DIR = build
+BUILD_DIR = out
 SRC_DIR = src
 CPP_FILES := $(shell find $(SRC_DIR) -type f -name '*.cpp')
 H_FILES := $(shell find $(SRC_DIR) -type f -name '*.h')
