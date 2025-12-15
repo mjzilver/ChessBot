@@ -1,4 +1,4 @@
-# CppChess
+# ChessGame
 
 This is a simple chess game with an AI opponent implemented in C++.
 

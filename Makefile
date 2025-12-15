@@ -1,4 +1,4 @@
-TARGET = CppChess
+TARGET = ChessGame
 BUILD_DIR = out
 SRC_DIR = src
 CPP_FILES := $(shell find $(SRC_DIR) -type f -name '*.cpp')

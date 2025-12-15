@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 
-project(CppChess)
+project(ChessGame)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,7 +18,7 @@ file(GLOB_RECURSE SOURCE_FILES
     "${PROJECT_SOURCE_DIR}/src/*.h"
 )
 
-add_executable(CppChess ${SOURCE_FILES})
+add_executable(ChessGame ${SOURCE_FILES})
 
 include(FetchContent)
 
@@ -31,14 +31,14 @@ FetchContent_Declare(SFML
 
 FetchContent_MakeAvailable(SFML)
 
-target_link_libraries(CppChess PRIVATE
+target_link_libraries(ChessGame PRIVATE
     sfml-graphics
     sfml-window
     sfml-system
 )
 
 add_custom_command(
-    TARGET CppChess POST_BUILD
+    TARGET ChessGame POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_SOURCE_DIR}/resources $<TARGET_FILE_DIR:CppChess>/resources
+    ${CMAKE_SOURCE_DIR}/resources $<TARGET_FILE_DIR:ChessGame>/resources
 )
