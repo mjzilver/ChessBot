@@ -1,5 +1,6 @@
 #include "ThreadPool.h"
 
+#include <stdexcept>
 #include <thread>
 
 ThreadPool::ThreadPool() {
@@ -11,14 +12,15 @@ ThreadPool::ThreadPool() {
 void ThreadPool::submit(std::function<void()> task) {
     {
         std::lock_guard<std::mutex> lock(queueMutex);
+        if (stop) throw std::runtime_error("submit on stopped ThreadPool");
         tasks.push(std::move(task));
     }
-    cv.notify_one();
+    cvWorkers.notify_one();
 }
 
 void ThreadPool::join() {
     std::unique_lock<std::mutex> lock(queueMutex);
-    cv.wait(lock, [this]() { return tasks.empty(); });
+    cvJoin.wait(lock, [this] { return tasks.empty() && activeTasks == 0; });
 }
 
 void ThreadPool::workerLoop() {
@@ -27,23 +29,34 @@ void ThreadPool::workerLoop() {
 
         {
             std::unique_lock<std::mutex> lock(queueMutex);
-            cv.wait(lock, [this] { return !tasks.empty() || stop; });
+            cvWorkers.wait(lock, [this] { return stop || !tasks.empty(); });
 
             if (stop && tasks.empty()) return;
 
             task = std::move(tasks.front());
             tasks.pop();
+            ++activeTasks;
         }
 
         task();
 
-        cv.notify_all();
+        {
+            std::lock_guard<std::mutex> lock(queueMutex);
+            --activeTasks;
+            if (tasks.empty() && activeTasks == 0) {
+                cvJoin.notify_one();
+            }
+        }
     }
 }
 
 ThreadPool::~ThreadPool() {
-    stop = true;
-    cv.notify_all();
+    {
+        std::lock_guard<std::mutex> lock(queueMutex);
+        stop = true;
+    }
+    cvWorkers.notify_all();
+
     for (auto& thread : workers) {
         if (thread.joinable()) thread.join();
     }
