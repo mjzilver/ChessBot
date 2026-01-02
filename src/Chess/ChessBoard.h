@@ -63,30 +63,30 @@ public:
     void resetBoard();
     void emptyBoard();
     uint64_t getBoard() const { return whitePieces | blackPieces; }
-    uint64_t getPiecesBitmap(const bool isWhite) const { return isWhite ? whitePieces : blackPieces; }
+    uint64_t getPiecesBitmap(bool isWhite) const { return isWhite ? whitePieces : blackPieces; }
 
     // Zobrist hashing
-    uint64_t getBoardHash(const bool isWhiteTurn) const;
+    uint64_t getBoardHash(bool isWhiteTurn) const;
     void initializeZobristTable();
 
     // piece functions
-    uint64_t getPieceLocation(const int x, const int y) const { return 1ULL << (x + y * 8); }
-    char getPieceSymbol(const int x, const int y) const;
-    void setPiece(const int x, const int y, const PieceType pieceType, const bool isWhite);
-    void removePiece(const int x, const int y, const PieceType pieceType, const bool isWhite);
-    bool isPieceAt(const int x, const int y) const;
-    bool isPieceAt(const int x, const int y, const bool isWhite) const;
-    bool isPieceAt(const int x, const int y, const PieceType pieceType) const;
-    bool isSquareEmpty(const int x, const int y) const { return !isPieceAt(x, y); }
-    bool isSquareTaken(const int x, const int y) const { return isPieceAt(x, y); }
-    bool getPieceColor(const int x, const int y) const;
-    bool removePieceAt(const int x, const int y);
-    PieceType getPieceTypeAt(const int x, const int y) const;
-    bool movePiece(const int x, const int y, const int newX, const int newY);
-    void undoMove(const int x, const int y, const int newX, const int newY, const PieceType capturedPiece);
-    uint64_t getValidMoves(const int x, const int y) const;
-    uint64_t getValidAttacks(const int x, const int y) const;
-    bool isValidMove(const int x, const int y, const int newX, const int newY) const;
-    bool isPathClear(const int startX, const int startY, const int endX, const int endY) const;
-    bool isValidAttack(const int x, const int y, const int newX, const int newY) const;
+    uint64_t getPieceLocation(int x, int y) const { return 1ULL << (x + y * 8); }
+    char getPieceSymbol(int x, int y) const;
+    void setPiece(int x, int y, const PieceType pieceType, bool isWhite);
+    void removePiece(int x, int y, const PieceType pieceType, bool isWhite);
+    bool isPieceAt(int x, int y) const;
+    bool isPieceAt(int x, int y, bool isWhite) const;
+    bool isPieceAt(int x, int y, const PieceType pieceType) const;
+    bool isSquareEmpty(int x, int y) const { return !isPieceAt(x, y); }
+    bool isSquareTaken(int x, int y) const { return isPieceAt(x, y); }
+    bool getPieceColor(int x, int y) const;
+    bool removePieceAt(int x, int y);
+    PieceType getPieceTypeAt(int x, int y) const;
+    bool movePiece(int x, int y, int newX, int newY);
+    void undoMove(int x, int y, int newX, int newY, const PieceType capturedPiece);
+    uint64_t getValidMoves(int x, int y) const;
+    uint64_t getValidAttacks(int x, int y) const;
+    bool isValidMove(int x, int y, int newX, int newY) const;
+    bool isPathClear(int startX, int startY, int endX, int endY) const;
+    bool isValidAttack(int x, int y, int newX, int newY) const;
 };

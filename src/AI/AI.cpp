@@ -14,7 +14,7 @@
 #include "../Utils/ctz.h"
 #include "PieceSqTable.h"
 
-void AI::makeMove(ChessBoard* board, const bool isWhite) {
+void AI::makeMove(ChessBoard* board, bool isWhite) {
     startTime = std::chrono::steady_clock::now();
     searchRootIsWhite = isWhite;
 
@@ -37,7 +37,7 @@ void AI::makeMove(ChessBoard* board, const bool isWhite) {
     std::cout << "Time to find best move " << duration.count() << " milliseconds\n";
 }
 
-Move AI::findBestMove(const ChessBoard* const board, const bool isWhite) {
+Move AI::findBestMove(const ChessBoard* const board, bool isWhite) {
     float bestScore = -10000.0f;
     Move bestMove{};
 
@@ -91,7 +91,7 @@ Move AI::findBestMove(const ChessBoard* const board, const bool isWhite) {
     return bestMove;
 }
 
-std::vector<Move> AI::generateMoves(const ChessBoard* const board, const bool isWhite) {
+std::vector<Move> AI::generateMoves(const ChessBoard* const board, bool isWhite) {
     uint64_t boardHash = board->getBoardHash(isWhite);
 
     {
@@ -148,7 +148,7 @@ std::vector<Move> AI::generateMoves(const ChessBoard* const board, const bool is
     return availableMoves;
 }
 
-float AI::minimax(ChessBoard* const board, const int depth, float alpha, float beta, const bool isWhiteToMove) {
+float AI::minimax(ChessBoard* const board, int depth, float alpha, float beta, bool isWhiteToMove) {
     if (depth == 0) {
         return evaluatePosition(board);
     }
@@ -216,7 +216,7 @@ float AI::evaluatePosition(const ChessBoard* const board) const {
     return searchRootIsWhite ? score : -score;
 }
 
-int AI::piecePositionScore(const int x, const int y, const PieceType type, const bool isWhite) const {
+int AI::piecePositionScore(int x, int y, const PieceType type, bool isWhite) const {
     int i = isWhite ? 0 : 1;
     switch (type) {
         case PAWN:

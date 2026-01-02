@@ -21,7 +21,7 @@ public:
     AI(const AI&) = delete;
     AI& operator=(const AI&) = delete;
 
-    void makeMove(ChessBoard* board, const bool isWhite);
+    void makeMove(ChessBoard* board, bool isWhite);
 
     ~AI() { threadpool.join(); }
 
@@ -40,12 +40,12 @@ private:
     std::chrono::steady_clock::time_point startTime;
 
     // evals
-    Move findBestMove(const ChessBoard* const board, const bool isWhite);
+    Move findBestMove(const ChessBoard* const board, bool isWhite);
     float evaluatePosition(const ChessBoard* const board) const;
-    int piecePositionScore(const int x, const int y, const PieceType type, const bool isWhite) const;
+    int piecePositionScore(int x, int y, const PieceType type, bool isWhite) const;
     float getValueForPiece(const PieceType piece) const;
-    float minimax(ChessBoard* const board, const int depth, float alpha, float beta, const bool isWhiteToMove);
+    float minimax(ChessBoard* const board, int depth, float alpha, float beta, bool isWhiteToMove);
 
     // move generation
-    std::vector<Move> generateMoves(const ChessBoard* const board, const bool isWhite);
+    std::vector<Move> generateMoves(const ChessBoard* const board, bool isWhite);
 };
