@@ -115,3 +115,9 @@ callgrind: build-profile
 .PHONY: callgrind-view
 callgrind-view:
 	kcachegrind ./$(BUILD_DIR)/callgrind.out.*
+
+.PHONY: profile
+profile: build-profile
+	cd $(BUILD_DIR) && \
+	./$(TARGET) && \
+	gprof ./$(TARGET) gmon.out > profile.txt
