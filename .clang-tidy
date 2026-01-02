@@ -5,7 +5,14 @@ Checks: >
   clang-diagnostic-unused-parameter,
   clang-diagnostic-unused-private-field
   llvm-include-cleaner,
-
+  readability-make-member-function-const,
+  cppcoreguidelines-avoid-non-const-global-variables,
+  performance-unnecessary-value-param,
+  performance-unnecessary-copy-initialization,
+  readability-qualified-auto,
+  cppcoreguidelines-avoid-mutable,
+  cppcoreguidelines-prefer-member-initializer,
+  
 CheckOptions:
   - key: readability-identifier-naming.VariableCase
     value: camelBack

@@ -175,7 +175,7 @@ uint64_t ChessBoard::getValidMoves(const int x, const int y) const {
 uint64_t ChessBoard::getValidAttacks(const int x, const int y) const {
     uint64_t validAttacks = 0;
     bool color = getPieceColor(x, y);
-    int64_t enemyPieces = getBoard(!color);
+    int64_t enemyPieces = getPiecesBitmap(!color);
 
     // loop over all enemy pieces and check if the piece can attack them
     while (enemyPieces) {
@@ -324,7 +324,7 @@ void ChessBoard::initializeZobristTable() {
     zobristSideToMove = dist(rng);
 }
 
-uint64_t ChessBoard::getBoardHash(const bool isWhiteMove) const {
+uint64_t ChessBoard::getBoardHash(const bool isWhiteTurn) const {
     uint64_t hash = 0;
 
     for (int y = 0; y < 8; ++y) {
@@ -339,7 +339,7 @@ uint64_t ChessBoard::getBoardHash(const bool isWhiteMove) const {
     }
 
     // XOR the side to move (flip if black's turn)
-    if (!isWhiteMove) {
+    if (!isWhiteTurn) {
         hash ^= zobristSideToMove;
     }
 

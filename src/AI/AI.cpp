@@ -104,7 +104,7 @@ std::vector<Move> AI::generateMoves(const ChessBoard* const board, const bool is
     }
 
     auto availableMoves = std::vector<Move>();
-    uint64_t boardPieces = board->getBoard(isWhite);
+    uint64_t boardPieces = board->getPiecesBitmap(isWhite);
 
     while (boardPieces) {
         int index = ctz(boardPieces);
@@ -209,8 +209,8 @@ float AI::evaluatePosition(const ChessBoard* const board) const {
         return score;
     };
 
-    whiteScore = evaluatePieces(board->getBoard(ChessBoard::WHITE), ChessBoard::WHITE);
-    blackScore = evaluatePieces(board->getBoard(ChessBoard::BLACK), ChessBoard::BLACK);
+    whiteScore = evaluatePieces(board->getPiecesBitmap(ChessBoard::WHITE), ChessBoard::WHITE);
+    blackScore = evaluatePieces(board->getPiecesBitmap(ChessBoard::BLACK), ChessBoard::BLACK);
 
     float score = whiteScore - blackScore;
     return searchRootIsWhite ? score : -score;

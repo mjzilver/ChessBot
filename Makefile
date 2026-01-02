@@ -99,7 +99,7 @@ format:
 .PHONY: tidy
 tidy: $(BUILD_DIR)/Makefile
 	cd $(BUILD_DIR) && cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
-	clang-tidy $(CPP_FILES) $(H_FILES) --fix -p $(BUILD_DIR) -- -x c++
+	clang-tidy $(CPP_FILES) --fix -p $(BUILD_DIR) -header-filter='.*' -- -x c++
 
 # ------------------------
 # Profiling

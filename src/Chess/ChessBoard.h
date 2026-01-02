@@ -24,9 +24,7 @@ public:
 
     std::mutex mtx;
 
-    ChessBoard(ChessBoard&& other) noexcept {
-        whitePieces = other.whitePieces;
-        blackPieces = other.blackPieces;
+    ChessBoard(ChessBoard&& other) noexcept : whitePieces(other.whitePieces), blackPieces(other.blackPieces) {
         for (int i = 0; i < 6; i++) pieces[i] = other.pieces[i];
         zobristSideToMove = other.zobristSideToMove;
         for (int i = 0; i < 12; i++)
@@ -65,10 +63,10 @@ public:
     void resetBoard();
     void emptyBoard();
     uint64_t getBoard() const { return whitePieces | blackPieces; }
-    uint64_t getBoard(const bool isWhite) const { return isWhite ? whitePieces : blackPieces; }
+    uint64_t getPiecesBitmap(const bool isWhite) const { return isWhite ? whitePieces : blackPieces; }
 
     // Zobrist hashing
-    uint64_t getBoardHash(const bool isWhiteMove) const;
+    uint64_t getBoardHash(const bool isWhiteTurn) const;
     void initializeZobristTable();
 
     // piece functions
