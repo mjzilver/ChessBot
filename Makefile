@@ -5,43 +5,37 @@ CPP_FILES := $(shell find $(SRC_DIR) -type f -name '*.cpp')
 H_FILES := $(shell find $(SRC_DIR) -type f -name '*.h')
 
 CMAKE_FLAGS = -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-DEBUG_FLAGS = -DCMAKE_BUILD_TYPE=Debug \
-              -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -O1"
-RELEASE_FLAGS = -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_CXX_FLAGS="-O3 -march=native -DNDEBUG"
-PROFILE_FLAGS = -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_CXX_FLAGS="-O2 -pg" \
-                -DCMAKE_EXE_LINKER_FLAGS="-pg"
 MAKE_FLAGS = -j4
 
 .PHONY: all
 all: run
 
-# ------
-# Build
-# ------
-
-$(BUILD_DIR)/Makefile: CMakeLists.txt | $(BUILD_DIR)
-	cd $(BUILD_DIR) && cmake $(CMAKE_FLAGS) $(RELEASE_FLAGS) ..
-
-$(BUILD_DIR):
-	mkdir -p $(BUILD_DIR)
-
-.PHONY: build
-build: $(BUILD_DIR)/Makefile
-	cd $(BUILD_DIR) && $(MAKE) $(MAKE_FLAGS)
-
 .PHONY: run
-run: build
+run: build-release
 	cd $(BUILD_DIR) && ./$(TARGET)
-
-.PHONY: run-console
-run-console: build
-	cd $(BUILD_DIR) && ./$(TARGET) -nogui
 
 .PHONY: clean
 clean:
 	rm -rf $(BUILD_DIR)
+
+# ------
+# Build
+# ------
+
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+.PHONY: build-debug
+build-debug: $(BUILD_DIR)
+	cd $(BUILD_DIR) && cmake $(CMAKE_FLAGS) -DCMAKE_BUILD_TYPE=Debug .. && $(MAKE) $(MAKE_FLAGS)
+
+.PHONY: build-release
+build-release: $(BUILD_DIR)
+	cd $(BUILD_DIR) && cmake $(CMAKE_FLAGS) -DCMAKE_BUILD_TYPE=Release .. && $(MAKE) $(MAKE_FLAGS)
+
+.PHONY: build-profile
+build-profile: $(BUILD_DIR)
+	cd $(BUILD_DIR) && cmake $(CMAKE_FLAGS) -DCMAKE_BUILD_TYPE=RelWithDebInfo .. && $(MAKE) $(MAKE_FLAGS)
 
 # ---------
 # Formatting
@@ -60,10 +54,6 @@ tidy: $(BUILD_DIR)/Makefile
 # Debugging
 # ---------
 
-.PHONY: build-debug
-build-debug: $(BUILD_DIR)
-	cd $(BUILD_DIR) && cmake $(CMAKE_FLAGS) $(DEBUG_FLAGS) .. && $(MAKE) $(MAKE_FLAGS)
-
 .PHONY: run-debug
 run-debug: build-debug
 	cd $(BUILD_DIR) && gdb ./$(TARGET)
@@ -72,12 +62,12 @@ run-debug: build-debug
 debug: build-debug run-debug
 
 .PHONY: valgrind
-valgrind: build
+valgrind: build-debug
 	cd $(BUILD_DIR) && valgrind --leak-check=full --error-limit=no ./$(TARGET) > valgrind_output.txt 2>&1
 
-.PHONY: build-profile
-build-debug: $(BUILD_DIR)
-	cd $(BUILD_DIR) && cmake $(CMAKE_FLAGS) $(PROFILE_FLAGS) .. && $(MAKE) $(MAKE_FLAGS)
+# ---------
+# Profiling
+# ---------
 
 .PHONY: callgrind
 callgrind: build-profile

@@ -9,9 +9,9 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
-set(CMAKE_CXX_FLAGS_DEBUG "-g -Wall" CACHE STRING "Flags for debug builds")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall" CACHE STRING "Flags for release builds")
-set(CMAKE_CXX_FLAGS_PROFILE "-O3 -pg -Wall" CACHE STRING "Flags for profiling builds")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -Wall")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g -Wall")
 
 file(GLOB_RECURSE SOURCE_FILES
     "${PROJECT_SOURCE_DIR}/src/*.cpp"
