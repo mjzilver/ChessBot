@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string>
-
 #include "../Chess/ChessBoard.h"
 
 class IDisplay {

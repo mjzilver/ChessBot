@@ -29,6 +29,8 @@ private:
     const int maxDepth;
     const int timeLimit;
     std::atomic<int> cacheHitCount{0};
+    std::atomic<int64_t> evaluatedMoves = 0;
+
     bool searchRootIsWhite;
 
     ThreadPool threadpool;

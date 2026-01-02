@@ -43,8 +43,9 @@ Move AI::findBestMove(const ChessBoard* const board, bool isWhite) {
 
     auto moves = generateMoves(board, isWhite);
 
-    std::cout << "Number of moves: " << moves.size() << std::endl;
     std::cout << "Cache hit count: " << cacheHitCount << std::endl;
+    std::cout << "Moves evaluated: " << evaluatedMoves << std::endl;
+    evaluatedMoves = 0;
     cacheHitCount = 0;
 
     if (moves.empty()) return bestMove;
@@ -165,6 +166,8 @@ float AI::minimax(ChessBoard* const board, int depth, float alpha, float beta, b
     auto moves = generateMoves(board, isWhiteToMove);
 
     for (const auto& move : moves) {
+        evaluatedMoves++;
+
         auto captured = board->getPieceTypeAt(move.toX, move.toY);
         board->movePiece(move.fromX, move.fromY, move.toX, move.toY);
 
