@@ -23,10 +23,12 @@ public:
 
     void makeMove(ChessBoard* board, const bool isWhite);
 
+    ~AI() { threadpool.join(); }
+
 private:
     const int maxDepth;
     const int timeLimit;
-    uint64_t cacheHitCount = 0;
+    std::atomic<int> cacheHitCount{0};
     bool searchRootIsWhite;
 
     ThreadPool threadpool;

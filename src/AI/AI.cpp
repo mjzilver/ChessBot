@@ -7,6 +7,7 @@
 #include <iostream>
 #include <mutex>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "../Chess/ChessBoard.h"
@@ -17,11 +18,20 @@ void AI::makeMove(ChessBoard* board, const bool isWhite) {
     startTime = std::chrono::steady_clock::now();
     searchRootIsWhite = isWhite;
 
-    Move bestMove = findBestMove(board, isWhite);
+    ChessBoard boardCopy;
+    {
+        std::lock_guard<std::mutex> lock(board->mtx);
+        boardCopy = std::move(board->clone());
+    }
 
+    Move bestMove = findBestMove(&boardCopy, isWhite);
+
+    board->mtx.lock();
     if (!board->movePiece(bestMove.fromX, bestMove.fromY, bestMove.toX, bestMove.toY)) {
         std::cout << "AI move failed, this should not happen" << std::endl;
     }
+    board->mtx.unlock();
+
     auto endTime = std::chrono::steady_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
     std::cout << "Time to find best move " << duration.count() << " milliseconds\n";
@@ -46,15 +56,13 @@ Move AI::findBestMove(const ChessBoard* const board, const bool isWhite) {
 
     for (const auto& move : moves) {
         threadpool.submit([&, move]() {
-            ChessBoard* newBoard = new ChessBoard(*board);
+            ChessBoard newBoard = board->clone();
 
-            auto captured = newBoard->getPieceTypeAt(move.toX, move.toY);
-            newBoard->movePiece(move.fromX, move.fromY, move.toX, move.toY);
+            auto captured = newBoard.getPieceTypeAt(move.toX, move.toY);
+            newBoard.movePiece(move.fromX, move.fromY, move.toX, move.toY);
 
             bool nextIsWhite = !isWhite;
-            float score = minimax(newBoard, maxDepth - 1, -1e9f, 1e9f, nextIsWhite);
-
-            delete newBoard;
+            float score = minimax(&newBoard, maxDepth - 1, -1e9f, 1e9f, nextIsWhite);
 
             {
                 std::lock_guard<std::mutex> lock(mutex);
@@ -91,7 +99,7 @@ std::vector<Move> AI::generateMoves(const ChessBoard* const board, const bool is
         auto it = moveCache.find(boardHash);
         if (it != moveCache.end()) {
             cacheHitCount++;
-            return it->second;
+            return std::vector<Move>(it->second);
         }
     }
 

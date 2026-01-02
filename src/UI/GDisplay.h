@@ -40,7 +40,8 @@ private:
     std::map<char, sf::Texture> pieceTextures;
     sf::Font font;
     SelectionPiece selectedPiece;
-    bool isCurrentPlayerWhite = true;
+    std::atomic<bool> isCurrentPlayerWhite{true};
+    std::atomic<bool> isAIThreadRunning{false};
 
     AI *ai;
 

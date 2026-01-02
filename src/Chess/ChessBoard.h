@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <mutex>
 
 #include "PieceType.h"
 
@@ -19,6 +20,42 @@ public:
     ChessBoard() {
         resetBoard();
         initializeZobristTable();
+    }
+
+    std::mutex mtx;
+
+    ChessBoard(ChessBoard&& other) noexcept {
+        whitePieces = other.whitePieces;
+        blackPieces = other.blackPieces;
+        for (int i = 0; i < 6; i++) pieces[i] = other.pieces[i];
+        zobristSideToMove = other.zobristSideToMove;
+        for (int i = 0; i < 12; i++)
+            for (int j = 0; j < 64; j++) zobristTable[i][j] = other.zobristTable[i][j];
+    }
+
+    ChessBoard& operator=(ChessBoard&& other) noexcept {
+        if (this != &other) {
+            whitePieces = other.whitePieces;
+            blackPieces = other.blackPieces;
+            for (int i = 0; i < 6; i++) pieces[i] = other.pieces[i];
+            zobristSideToMove = other.zobristSideToMove;
+            for (int i = 0; i < 12; i++)
+                for (int j = 0; j < 64; j++) zobristTable[i][j] = other.zobristTable[i][j];
+        }
+        return *this;
+    }
+
+    ChessBoard(const ChessBoard&) = delete;
+
+    ChessBoard clone() const {
+        ChessBoard copy;
+        copy.whitePieces = whitePieces;
+        copy.blackPieces = blackPieces;
+        for (int i = 0; i < 6; i++) copy.pieces[i] = pieces[i];
+        copy.zobristSideToMove = zobristSideToMove;
+        for (int i = 0; i < 12; i++)
+            for (int j = 0; j < 64; j++) copy.zobristTable[i][j] = zobristTable[i][j];
+        return copy;
     }
 
     static const bool WHITE = true;

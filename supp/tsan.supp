@@ -1,0 +1,6 @@
+race:libgallium
+race:libGL
+race:libGLX
+race:libdrm
+race:libxcb
+race:libEGL

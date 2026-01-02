@@ -6,7 +6,7 @@
 
 #include "../AI/AI.h"
 
-GDisplay::GDisplay(AI *ai) : squareSize(60), margin(25) {
+GDisplay::GDisplay(AI* ai) : squareSize(60), margin(25) {
     loadPieceTextures(pieceTextures);
     if (!font.loadFromFile("./resources/OpenSans-Regular.ttf")) {
         throw std::runtime_error("Error loading font");
@@ -27,15 +27,15 @@ GDisplay::GDisplay(AI *ai) : squareSize(60), margin(25) {
 
 GDisplay::~GDisplay() { pieceTextures.clear(); }
 
-void GDisplay::drawLoop(ChessBoard &board) {
+void GDisplay::drawLoop(ChessBoard& board) {
     while (window.isOpen()) {
         handleInput(board);
 
-        static bool isAIThreadRunning = false;
         if (!isCurrentPlayerWhite && !isAIThreadRunning) {
             isAIThreadRunning = true;
             std::thread aiThread([&]() {
                 ai->makeMove(&board, false);
+
                 isCurrentPlayerWhite = true;
                 isAIThreadRunning = false;
             });
@@ -43,18 +43,25 @@ void GDisplay::drawLoop(ChessBoard &board) {
             aiThread.detach();
         }
 
-        drawBoard(board);
+        ChessBoard boardCopy;
+        {
+            std::lock_guard<std::mutex> lock(board.mtx);
+            boardCopy = board.clone();
+        }
+
+        drawBoard(boardCopy);
     }
 }
 
-void GDisplay::handleInput(ChessBoard &board) {
+
+void GDisplay::handleInput(ChessBoard& board) {
     sf::Event event;
     while (window.pollEvent(event)) {
         handleEvent(event, board);
     }
 }
 
-void GDisplay::drawBoard(const ChessBoard &board) {
+void GDisplay::drawBoard(const ChessBoard& board) {
     window.clear();
 
     // Draw ranks
@@ -119,7 +126,7 @@ void GDisplay::drawBoard(const ChessBoard &board) {
     window.display();
 }
 
-void GDisplay::loadPieceTextures(std::map<char, sf::Texture> &pieceTextures) const {
+void GDisplay::loadPieceTextures(std::map<char, sf::Texture>& pieceTextures) const {
     const std::string imagePath = "./resources/images/";
 
     // Define the pieces and their corresponding filenames
@@ -128,9 +135,9 @@ void GDisplay::loadPieceTextures(std::map<char, sf::Texture> &pieceTextures) con
                                                   {'Q', "WQ.png"}, {'K', "WK.png"}, {'p', "BP.png"}, {'n', "BN.png"},
                                                   {'b', "BB.png"}, {'r', "BR.png"}, {'q', "BQ.png"}, {'k', "BK.png"}};
 
-    for (const auto &entry : pieceFilenames) {
+    for (const auto& entry : pieceFilenames) {
         char piece = entry.first;
-        const std::string &filename = entry.second;
+        const std::string& filename = entry.second;
 
         sf::Texture texture;
         if (texture.loadFromFile(imagePath + filename)) {
@@ -141,7 +148,7 @@ void GDisplay::loadPieceTextures(std::map<char, sf::Texture> &pieceTextures) con
     }
 }
 
-void GDisplay::drawCircleOutline(int x, int y, float circleFraction, const sf::Color &borderColor) {
+void GDisplay::drawCircleOutline(int x, int y, float circleFraction, const sf::Color& borderColor) {
     const float radius = circleFraction * (squareSize / 2);
     const float offset = (squareSize * (1 - circleFraction)) / 2;
 
@@ -153,7 +160,7 @@ void GDisplay::drawCircleOutline(int x, int y, float circleFraction, const sf::C
     window.draw(border);
 }
 
-void GDisplay::drawCircle(int x, int y, float circleFraction, const sf::Color &color) {
+void GDisplay::drawCircle(int x, int y, float circleFraction, const sf::Color& color) {
     const float radius = circleFraction * (squareSize / 2);
     const float offset = (squareSize * (1 - circleFraction)) / 2;
 
@@ -163,14 +170,14 @@ void GDisplay::drawCircle(int x, int y, float circleFraction, const sf::Color &c
     window.draw(circle);
 }
 
-void GDisplay::drawSquare(int x, int y, const sf::Color &color) {
+void GDisplay::drawSquare(int x, int y, const sf::Color& color) {
     sf::RectangleShape square(sf::Vector2f(squareSize, squareSize));
     square.setPosition(x * squareSize + margin, y * squareSize);
     square.setFillColor(color);
     window.draw(square);
 }
 
-void GDisplay::handleEvent(sf::Event &event, ChessBoard &board) {
+void GDisplay::handleEvent(sf::Event& event, ChessBoard& board) {
     switch (event.type) {
         case sf::Event::Closed:
             window.close();
@@ -183,7 +190,7 @@ void GDisplay::handleEvent(sf::Event &event, ChessBoard &board) {
     }
 }
 
-void GDisplay::handleMouseClick(sf::Event::MouseButtonEvent &mouse, ChessBoard &board) {
+void GDisplay::handleMouseClick(sf::Event::MouseButtonEvent& mouse, ChessBoard& board) {
     if (mouse.button == sf::Mouse::Left) {
         sf::Vector2i mousePos = sf::Mouse::getPosition(window);
         sf::Vector2f viewCoordinates = window.mapPixelToCoords(mousePos);
@@ -197,7 +204,7 @@ void GDisplay::handleMouseClick(sf::Event::MouseButtonEvent &mouse, ChessBoard &
     }
 }
 
-void GDisplay::handleValidChessboardClick(int colIndex, int rowIndex, ChessBoard &board) {
+void GDisplay::handleValidChessboardClick(int colIndex, int rowIndex, ChessBoard& board) {
     SelectionPiece clickedPiece = {colIndex, rowIndex, board.getPieceSymbol(colIndex, rowIndex),
                                    board.isPieceAt(colIndex, rowIndex, true)};
 

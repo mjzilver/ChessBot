@@ -4,20 +4,24 @@ SRC_DIR = src
 CPP_FILES := $(shell find $(SRC_DIR) -type f -name '*.cpp')
 H_FILES := $(shell find $(SRC_DIR) -type f -name '*.h')
 
-CMAKE_FLAGS = -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-DEBUG_FLAGS   = -DCMAKE_BUILD_TYPE=Debug \
-                -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -O1"
-RELEASE_FLAGS = -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_CXX_FLAGS="-O3 -march=native -DNDEBUG"
-PROFILE_FLAGS = -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_CXX_FLAGS="-O2 -pg" \
-                -DCMAKE_EXE_LINKER_FLAGS="-pg"
-MAKE_FLAGS = -j4
+# ------------------------
+# Build / Compiler flags
+# ------------------------
+CMAKE_FLAGS      = -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+DEBUG_FLAGS      = -DCMAKE_BUILD_TYPE=Debug \
+                   -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -O1"
+RELEASE_FLAGS    = -DCMAKE_BUILD_TYPE=Release \
+                   -DCMAKE_CXX_FLAGS="-O3 -march=native -DNDEBUG"
+PROFILE_FLAGS    = -DCMAKE_BUILD_TYPE=Release \
+                   -DCMAKE_CXX_FLAGS="-O2 -pg" \
+                   -DCMAKE_EXE_LINKER_FLAGS="-pg"
+TSAN_FLAGS       = -DCMAKE_BUILD_TYPE=Debug \
+                   -DCMAKE_CXX_FLAGS="-fsanitize=thread -fno-omit-frame-pointer -O1"
+MAKE_FLAGS       := -j$(shell nproc --ignore=1)
 
 # ------------------------
 # Build Setup
 # ------------------------
-
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
@@ -40,10 +44,13 @@ build-release: $(BUILD_DIR)
 build-profile: $(BUILD_DIR)
 	cd $(BUILD_DIR) && cmake $(CMAKE_FLAGS) $(PROFILE_FLAGS) .. && $(MAKE) $(MAKE_FLAGS)
 
-# ------------------------
-# Run
-# ------------------------
+.PHONY: build-tsan
+build-tsan: $(BUILD_DIR)
+	cd $(BUILD_DIR) && cmake $(CMAKE_FLAGS) $(TSAN_FLAGS) .. && $(MAKE) $(MAKE_FLAGS)
 
+# ------------------------
+# Run / Debug
+# ------------------------
 .PHONY: run
 run: build-release
 	cd $(BUILD_DIR) && ./$(TARGET)
@@ -55,8 +62,21 @@ run-console: build
 .PHONY: run-debug
 run-debug: build-debug
 	cd $(BUILD_DIR) && \
-	ASAN_OPTIONS=detect_leaks=1:abort_on_error=0:symbolize=0:malloc_context_size=50:verbosity=0:log_path=asan.log \
+	ASAN_OPTIONS=detect_leaks=1:\
+	abort_on_error=0:\
+	symbolize=0:\
+	verbosity=0:\
+	log_path=asan.log \
 	LSAN_OPTIONS=verbosity=0 \
+	./$(TARGET)
+
+.PHONY: tsan
+tsan: build-tsan
+	cd $(BUILD_DIR) && \
+	TSAN_OPTIONS=log_path=tsan.log:\
+	suppressions=../supp/tsan.supp:\
+	verbosity=1:\
+	halt_on_error=0 \
 	./$(TARGET)
 
 .PHONY: debug
@@ -65,7 +85,6 @@ debug: run-debug
 # ------------------------
 # Clean
 # ------------------------
-
 .PHONY: clean
 clean:
 	rm -rf $(BUILD_DIR)
@@ -73,7 +92,6 @@ clean:
 # ------------------------
 # Formatting / Linting
 # ------------------------
-
 .PHONY: format
 format:
 	clang-format -i $(CPP_FILES) $(H_FILES)
@@ -86,7 +104,6 @@ tidy: $(BUILD_DIR)/Makefile
 # ------------------------
 # Profiling / Valgrind
 # ------------------------
-
 .PHONY: valgrind
 valgrind: build-debug
 	cd $(BUILD_DIR) && valgrind --leak-check=full --error-limit=no ./$(TARGET) > valgrind_output.txt 2>&1
@@ -98,34 +115,3 @@ callgrind: build-profile
 .PHONY: callgrind-view
 callgrind-view:
 	kcachegrind ./$(BUILD_DIR)/callgrind.out.*
-
-# ------------------------
-# ThreadSanitizer (TSAN)
-# ------------------------
-
-TSAN_FLAGS = -fsanitize=thread -fPIE -g
-TSAN_LINKER_FLAGS = -fsanitize=thread
-
-.PHONY: build-tsan
-build-tsan: $(BUILD_DIR)
-	cd $(BUILD_DIR) && cmake $(CMAKE_FLAGS) -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="$(TSAN_FLAGS)" -DCMAKE_LINKER_FLAGS="$(TSAN_LINKER_FLAGS)" .. && $(MAKE) $(MAKE_FLAGS)
-
-.PHONY: tsan
-tsan: build-tsan
-	cd $(BUILD_DIR) && ./$(TARGET)
-
-# ------------------------
-# Perf profiling
-# ------------------------
-
-.PHONY: perf
-perf: build-release
-	cd $(BUILD_DIR) && perf stat -r 5 ./$(TARGET)
-
-.PHONY: perf-record
-perf-record: build-release
-	cd $(BUILD_DIR) && perf record -o perf.data ./$(TARGET)
-
-.PHONY: perf-report
-perf-report:
-	perf report -i $(BUILD_DIR)/perf.data
