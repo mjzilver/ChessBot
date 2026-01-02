@@ -5,7 +5,7 @@ CPP_FILES := $(shell find $(SRC_DIR) -type f -name '*.cpp')
 H_FILES := $(shell find $(SRC_DIR) -type f -name '*.h')
 
 # ------------------------
-# Build / Compiler flags
+# Flags
 # ------------------------
 CMAKE_FLAGS      = -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 DEBUG_FLAGS      = -DCMAKE_BUILD_TYPE=Debug \
@@ -90,7 +90,7 @@ clean:
 	rm -rf $(BUILD_DIR)
 
 # ------------------------
-# Formatting / Linting
+# Linting
 # ------------------------
 .PHONY: format
 format:
@@ -102,7 +102,7 @@ tidy: $(BUILD_DIR)/Makefile
 	clang-tidy $(CPP_FILES) $(H_FILES) --fix -p $(BUILD_DIR) -- -x c++
 
 # ------------------------
-# Profiling / Valgrind
+# Profiling
 # ------------------------
 .PHONY: valgrind
 valgrind: build-debug

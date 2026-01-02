@@ -53,7 +53,6 @@ void GDisplay::drawLoop(ChessBoard& board) {
     }
 }
 
-
 void GDisplay::handleInput(ChessBoard& board) {
     sf::Event event;
     while (window.pollEvent(event)) {
