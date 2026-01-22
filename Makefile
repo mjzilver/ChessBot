@@ -19,6 +19,8 @@ TSAN_FLAGS       = -DCMAKE_BUILD_TYPE=Debug \
                    -DCMAKE_CXX_FLAGS="-fsanitize=thread -fno-omit-frame-pointer -O1"
 MAKE_FLAGS       := -j$(shell nproc --ignore=1)
 
+all: run
+
 # ------------------------
 # Build Setup
 # ------------------------
@@ -99,7 +101,7 @@ format:
 .PHONY: tidy
 tidy: $(BUILD_DIR)/Makefile
 	cd $(BUILD_DIR) && cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
-	clang-tidy $(CPP_FILES) --fix -p $(BUILD_DIR) -header-filter='.*' -- -x c++
+	clang-tidy -p $(BUILD_DIR) $(CPP_FILES) $(H_FILES) --fix
 
 # ------------------------
 # Profiling

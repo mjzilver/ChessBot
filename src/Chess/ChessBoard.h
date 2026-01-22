@@ -24,37 +24,13 @@ public:
 
     std::mutex mtx;
 
-    ChessBoard(ChessBoard&& other) noexcept : whitePieces(other.whitePieces), blackPieces(other.blackPieces) {
-        for (int i = 0; i < 6; i++) pieces[i] = other.pieces[i];
-        zobristSideToMove = other.zobristSideToMove;
-        for (int i = 0; i < 12; i++)
-            for (int j = 0; j < 64; j++) zobristTable[i][j] = other.zobristTable[i][j];
-    }
+    ChessBoard(ChessBoard&& other) noexcept;
 
-    ChessBoard& operator=(ChessBoard&& other) noexcept {
-        if (this != &other) {
-            whitePieces = other.whitePieces;
-            blackPieces = other.blackPieces;
-            for (int i = 0; i < 6; i++) pieces[i] = other.pieces[i];
-            zobristSideToMove = other.zobristSideToMove;
-            for (int i = 0; i < 12; i++)
-                for (int j = 0; j < 64; j++) zobristTable[i][j] = other.zobristTable[i][j];
-        }
-        return *this;
-    }
+    ChessBoard& operator=(ChessBoard&& other) noexcept;
 
     ChessBoard(const ChessBoard&) = delete;
 
-    ChessBoard clone() const {
-        ChessBoard copy;
-        copy.whitePieces = whitePieces;
-        copy.blackPieces = blackPieces;
-        for (int i = 0; i < 6; i++) copy.pieces[i] = pieces[i];
-        copy.zobristSideToMove = zobristSideToMove;
-        for (int i = 0; i < 12; i++)
-            for (int j = 0; j < 64; j++) copy.zobristTable[i][j] = zobristTable[i][j];
-        return copy;
-    }
+    ChessBoard clone() const;
 
     static const bool WHITE = true;
     static const bool BLACK = false;
@@ -70,7 +46,6 @@ public:
     void initializeZobristTable();
 
     // piece functions
-    uint64_t getPieceLocation(int x, int y) const { return 1ULL << (x + y * 8); }
     char getPieceSymbol(int x, int y) const;
     void setPiece(int x, int y, const PieceType pieceType, bool isWhite);
     void removePiece(int x, int y, const PieceType pieceType, bool isWhite);
@@ -85,8 +60,9 @@ public:
     bool movePiece(int x, int y, int newX, int newY);
     void undoMove(int x, int y, int newX, int newY, const PieceType capturedPiece);
     uint64_t getValidMoves(int x, int y) const;
-    uint64_t getValidAttacks(int x, int y) const;
     bool isValidMove(int x, int y, int newX, int newY) const;
-    bool isPathClear(int startX, int startY, int endX, int endY) const;
     bool isValidAttack(int x, int y, int newX, int newY) const;
+
+private:
+    void copyFrom(const ChessBoard& other);
 };

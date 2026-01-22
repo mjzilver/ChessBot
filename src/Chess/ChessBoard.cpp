@@ -1,12 +1,55 @@
 #include "ChessBoard.h"
 
+#include <cassert>
 #include <cmath>
 #include <cstdint>
 #include <random>
 
-#include "../Utils/ctz.h"
+#include "./AttackTables.h"
+/*
+ * Bitboard usage:
+ *  - index = x + y * 8   get the index
+ *  - 1ULL << index       sets a bit at the square index
+ *  - (board & mask)      checks if a square is occupied
+ *  - board |= mask       adds a piece
+ *  - board &= ~mask      removes a piece
+ *
+ * Bit shifts are used to generate moves.
+ *
+ *  - North:              >> 8
+ *  - South:              << 8
+ *  - East:               << 1
+ *  - West:               >> 1
+ */
 
-// board functions
+ChessBoard::ChessBoard(ChessBoard&& other) noexcept { copyFrom(other); }
+
+ChessBoard& ChessBoard::operator=(ChessBoard&& other) noexcept {
+    if (this != &other) {
+        copyFrom(other);
+    }
+    return *this;
+}
+
+ChessBoard ChessBoard::clone() const {
+    ChessBoard copy;
+    copy.copyFrom(*this);
+    return copy;
+}
+
+void ChessBoard::copyFrom(const ChessBoard& other) {
+    whitePieces = other.whitePieces;
+    blackPieces = other.blackPieces;
+    for (int i = 0; i < 6; ++i) pieces[i] = other.pieces[i];
+    zobristSideToMove = other.zobristSideToMove;
+
+    for (int i = 0; i < 12; ++i) {
+        for (int j = 0; j < 64; ++j) {
+            zobristTable[i][j] = other.zobristTable[i][j];
+        }
+    }
+}
+
 void ChessBoard::resetBoard() {
     emptyBoard();
 
@@ -58,7 +101,6 @@ void ChessBoard::emptyBoard() {
 
 char ChessBoard::getPieceSymbol(int x, int y) const { return pieceTypeToSymbol(getPieceTypeAt(x, y)); }
 
-// piece functions
 void ChessBoard::setPiece(int x, int y, const PieceType pieceType, bool isWhite) {
     uint64_t piece = 1ULL << (x + y * 8);
     if (isWhite) {
@@ -80,26 +122,30 @@ void ChessBoard::removePiece(int x, int y, const PieceType pieceType, bool isWhi
 }
 
 bool ChessBoard::isPieceAt(int x, int y) const {
+    if (!onBoard(x, y)) return false;
     uint64_t piece = 1ULL << (x + y * 8);
     return (whitePieces & piece) || (blackPieces & piece);
 }
 
 bool ChessBoard::isPieceAt(int x, int y, bool isWhite) const {
+    if (!onBoard(x, y)) return false;
     uint64_t piece = 1ULL << (x + y * 8);
     return isWhite ? (whitePieces & piece) : (blackPieces & piece);
 }
 
 bool ChessBoard::isPieceAt(int x, int y, const PieceType pieceType) const {
+    if (!onBoard(x, y)) return false;
     uint64_t piece = 1ULL << (x + y * 8);
     return pieces[pieceType] & piece;
 }
 
 bool ChessBoard::getPieceColor(int x, int y) const {
     uint64_t piece = 1ULL << (x + y * 8);
-    return whitePieces & piece;
+    return (whitePieces & piece) != 0;
 }
 
 bool ChessBoard::removePieceAt(int x, int y) {
+    if (!onBoard(x, y)) return false;
     if (isPieceAt(x, y)) {
         uint64_t piece = 1ULL << (x + y * 8);
         whitePieces &= ~piece;
@@ -113,6 +159,8 @@ bool ChessBoard::removePieceAt(int x, int y) {
 }
 
 PieceType ChessBoard::getPieceTypeAt(int x, int y) const {
+    if (!onBoard(x, y)) return EMPTY;
+
     if (isPieceAt(x, y, PAWN)) return PAWN;
     if (isPieceAt(x, y, ROOK)) return ROOK;
     if (isPieceAt(x, y, KNIGHT)) return KNIGHT;
@@ -123,192 +171,114 @@ PieceType ChessBoard::getPieceTypeAt(int x, int y) const {
 }
 
 bool ChessBoard::movePiece(int x, int y, int newX, int newY) {
-    if (isPieceAt(x, y)) {
-        if (isValidAttack(x, y, newX, newY) && isPieceAt(newX, newY, !getPieceColor(x, y))) {
-            auto piece = getPieceTypeAt(x, y);
-            removePieceAt(newX, newY);
-            setPiece(newX, newY, piece, getPieceColor(x, y));
-            removePieceAt(x, y);
+    if (!onBoard(x, y) || !onBoard(newX, newY)) return false;
+    if (!isPieceAt(x, y)) return false;
 
-            return true;
-        } else if (isValidMove(x, y, newX, newY)) {
-            auto piece = getPieceTypeAt(x, y);
-            setPiece(newX, newY, piece, getPieceColor(x, y));
-            removePieceAt(x, y);
+    auto piece = getPieceTypeAt(x, y);
 
-            return true;
-        }
-    }
-    return false;
+    // Use getValidMoves to validate
+    uint64_t valid = getValidMoves(x, y);
+    uint64_t target = 1ULL << (newX + newY * 8);
+
+    if (!(valid & target)) return false;
+
+    // Make move
+    removePieceAt(newX, newY);
+    setPiece(newX, newY, piece, getPieceColor(x, y));
+    removePieceAt(x, y);
+
+    return true;
 }
 
 void ChessBoard::undoMove(int x, int y, int newX, int newY, const PieceType capturedPiece) {
+    if (!onBoard(x, y) || !onBoard(newX, newY)) return;
+
     bool color = getPieceColor(newX, newY);
     auto piece = getPieceTypeAt(newX, newY);
+
     setPiece(x, y, piece, color);
     removePieceAt(newX, newY);
+
     if (capturedPiece != EMPTY) {
         setPiece(newX, newY, capturedPiece, !color);
     }
 }
 
-uint64_t ChessBoard::getValidMoves(int x, int y) const {
-    uint64_t validMoves = 0;
-    int64_t emptySquares = ~getBoard();
+inline uint64_t pawnPushes(int from, bool white, uint64_t occ) {
+    uint64_t fromBB = 1ULL << from;
+    uint64_t moves = 0;
 
-    // loop over all empty squares and check if the piece can move there
-    while (emptySquares) {
-        int index = ctz(emptySquares);
-        int newX = index % 8;
-        int newY = index / 8;
+    if (white) {
+        uint64_t one = fromBB >> 8;
+        if (!(one & occ)) {
+            moves |= one;
 
-        if (isValidMove(x, y, newX, newY)) {
-            validMoves |= 1ULL << index;
+            if ((from >> 3) == 6) {
+                uint64_t two = fromBB >> 16;
+                if (!(two & occ)) moves |= two;
+            }
         }
+    } else {
+        uint64_t one = fromBB << 8;
+        if (!(one & occ)) {
+            moves |= one;
 
-        emptySquares &= emptySquares - 1;
+            if ((from >> 3) == 1) {
+                uint64_t two = fromBB << 16;
+                if (!(two & occ)) moves |= two;
+            }
+        }
     }
 
-    return validMoves;
+    return moves;
 }
 
-uint64_t ChessBoard::getValidAttacks(int x, int y) const {
-    uint64_t validAttacks = 0;
-    bool color = getPieceColor(x, y);
-    int64_t enemyPieces = getPiecesBitmap(!color);
+uint64_t ChessBoard::getValidMoves(int x, int y) const {
+    if (!onBoard(x, y) || !isPieceAt(x, y)) return 0;
 
-    // loop over all enemy pieces and check if the piece can attack them
-    while (enemyPieces) {
-        int index = ctz(enemyPieces);
-        int enemyX = index % 8;
-        int enemyY = index / 8;
+    bool white = getPieceColor(x, y);
+    uint64_t own = white ? whitePieces : blackPieces;
+    uint64_t occ = whitePieces | blackPieces;
+    uint64_t from = x + (y << 3);
 
-        if (isValidAttack(x, y, enemyX, enemyY)) {
-            validAttacks |= 1ULL << index;
+    switch (getPieceTypeAt(x, y)) {
+        case KNIGHT:
+            return ATTACK_TABLES.knight[from] & ~own;
+
+        case KING:
+            return ATTACK_TABLES.king[from] & ~own;
+
+        case PAWN: {
+            uint64_t enemy = occ ^ own;
+            return pawnPushes(from, white, occ) | (ATTACK_TABLES.pawn[white][from] & enemy);
         }
 
-        enemyPieces &= enemyPieces - 1;
-    }
+        case ROOK:
+            return rookMoves(from, occ) & ~own;
 
-    return validAttacks;
+        case BISHOP:
+            return bishopMoves(from, occ) & ~own;
+
+        case QUEEN:
+            return (rookMoves(from, occ) | bishopMoves(from, occ)) & ~own;
+
+        default:
+            return 0;
+    }
 }
 
 bool ChessBoard::isValidMove(int x, int y, int newX, int newY) const {
-    if (isPieceAt(x, y)) {
-        auto piece = getPieceTypeAt(x, y);
-        auto pieceColor = getPieceColor(x, y);
-        // Can't move to a square occupied by a piece of the same color
-        if (isPieceAt(newX, newY, pieceColor)) {
-            return false;
-        }
+    if (!onBoard(x, y) || !onBoard(newX, newY)) return false;
 
-        bool isWhite = isPieceAt(x, y, true);
-        // Direction of movement for white and black pieces
-        int direction = isWhite ? -1 : 1;
-
-        switch (piece) {
-            case PAWN:
-                if (newX == x && newY == y + direction) {
-                    if (!isPieceAt(x, y + direction)) {
-                        return true;
-                    }
-                } else if (newX == x && newY == y + 2 * direction && y == (isWhite ? 6 : 1)) {
-                    if (!isPieceAt(x, y + direction) && !isPieceAt(x, y + 2 * direction)) {
-                        return true;
-                    }
-                }
-                break;
-            case KNIGHT:
-                // knight can move in an L shape
-                return ((newX == x + 1 && newY == y + 2) || (newX == x + 2 && newY == y + 1) ||
-                        (newX == x + 2 && newY == y - 1) || (newX == x + 1 && newY == y - 2) ||
-                        (newX == x - 1 && newY == y - 2) || (newX == x - 2 && newY == y - 1) ||
-                        (newX == x - 2 && newY == y + 1) || (newX == x - 1 && newY == y + 2));
-                break;
-            case QUEEN:
-                if (newX == x || newY == y || newX - x == newY - y || newX - x == y - newY) {
-                    // Check for blocking pieces in the path of the queen
-                    if (!isPathClear(x, y, newX, newY)) {
-                        return false;
-                    }
-                    return true;
-                }
-                break;
-            case ROOK:
-                // rook can move any number of spaces horizontally or vertically
-                if (newX == x || newY == y) {
-                    if (!isPathClear(x, y, newX, newY)) {
-                        return false;
-                    }
-                    return true;
-                }
-                break;
-            case BISHOP:
-                // bishop can move any number of spaces diagonally
-                if (newX - x == newY - y || newX - x == y - newY) {
-                    if (!isPathClear(x, y, newX, newY)) {
-                        return false;
-                    }
-                    return true;
-                }
-                break;
-            case KING:
-                // King can move 1 space in any direction
-                if (std::abs(newX - x) <= 1 && std::abs(newY - y) <= 1) {
-                    return true;
-                }
-                break;
-            case EMPTY:
-                return false;
-        }
-    }
-    return false;
-}
-
-bool ChessBoard::isPathClear(int startX, int startY, int endX, int endY) const {
-    // Check if the path from start to end is clear (no pieces in the way)
-    int deltaX = (endX > startX) ? 1 : ((endX < startX) ? -1 : 0);
-    int deltaY = (endY > startY) ? 1 : ((endY < startY) ? -1 : 0);
-
-    int currentX = startX + deltaX;
-    int currentY = startY + deltaY;
-
-    while (currentX != endX || currentY != endY) {
-        if (isPieceAt(currentX, currentY)) {
-            return false;  // There is a piece in the path
-        }
-        currentX += deltaX;
-        currentY += deltaY;
-    }
-
-    return true;  // The path is clear
+    uint64_t moveMask = 1ULL << (newX + newY * 8);
+    return (getValidMoves(x, y) & moveMask) != 0;
 }
 
 bool ChessBoard::isValidAttack(int x, int y, int newX, int newY) const {
-    if (isPieceAt(x, y)) {
-        auto piece = getPieceTypeAt(x, y);
-        // Can't attack pieces of the same color
-        if (isPieceAt(x, y, true) == isPieceAt(newX, newY, true)) {
-            return false;
-        }
+    if (!onBoard(x, y) || !onBoard(newX, newY)) return false;
+    if (!isPieceAt(newX, newY)) return false;
 
-        bool isWhite = isPieceAt(x, y, true);
-        // Direction of movement for white and black pieces
-        int direction = isWhite ? -1 : 1;
-
-        switch (piece) {
-            case PAWN:
-                // Pawn attacks diagonally
-                if ((newX == x + 1 || newX == x - 1) && newY == y + direction) {
-                    return true;
-                }
-                break;
-            default:
-                // For other pieces, use the isValidMove function
-                return isValidMove(x, y, newX, newY);
-        }
-    }
-    return false;
+    return isValidMove(x, y, newX, newY) && (getPieceColor(x, y) != getPieceColor(newX, newY));
 }
 
 void ChessBoard::initializeZobristTable() {
@@ -338,7 +308,6 @@ uint64_t ChessBoard::getBoardHash(bool isWhiteTurn) const {
         }
     }
 
-    // XOR the side to move (flip if black's turn)
     if (!isWhiteTurn) {
         hash ^= zobristSideToMove;
     }

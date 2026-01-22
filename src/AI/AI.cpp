@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "../Chess/ChessBoard.h"
-#include "../Utils/ctz.h"
+#include "../Utils/bits.h"
 #include "PieceSqTable.h"
 
 void AI::makeMove(ChessBoard* board, bool isWhite) {
@@ -112,20 +112,7 @@ std::vector<Move> AI::generateMoves(const ChessBoard* const board, bool isWhite)
         int x = index % 8;
         int y = index / 8;
 
-        auto attacks = board->getValidAttacks(x, y);
         auto moves = board->getValidMoves(x, y);
-
-        while (attacks) {
-            int attackIndex = ctz(attacks);
-            int newX = attackIndex % 8;
-            int newY = attackIndex / 8;
-
-            Move move = {x, y, newX, newY, 0};
-
-            availableMoves.push_back(move);
-
-            attacks &= attacks - 1;
-        }
 
         while (moves) {
             int moveIndex = ctz(moves);
@@ -220,20 +207,25 @@ float AI::evaluatePosition(const ChessBoard* const board) const {
 }
 
 int AI::piecePositionScore(int x, int y, const PieceType type, bool isWhite) const {
-    int i = isWhite ? 0 : 1;
+    int idx = y * 8 + x;
+
+    if (!isWhite) {
+        idx = 63 - idx;
+    }
+
     switch (type) {
         case PAWN:
-            return PAWN_TABLE[i][y * 8 + x];
+            return PAWN_TABLE[idx];
         case KNIGHT:
-            return KNIGHT_TABLE[i][y * 8 + x];
+            return KNIGHT_TABLE[idx];
         case BISHOP:
-            return BISHOP_TABLE[i][y * 8 + x];
+            return BISHOP_TABLE[idx];
         case ROOK:
-            return ROOK_TABLE[i][y * 8 + x];
+            return ROOK_TABLE[idx];
         case QUEEN:
-            return QUEEN_TABLE[i][y * 8 + x];
+            return QUEEN_TABLE[idx];
         case KING:
-            return KING_TABLE[i][y * 8 + x];
+            return KING_TABLE[idx];
         default:
             return 0;
     }

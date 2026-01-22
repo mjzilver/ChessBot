@@ -10,6 +10,7 @@ This is a simple chess game with an AI opponent implemented in C++.
 - [X] `Graphical user interface`
 - [X] `Configurable AI difficulty and time limit`
 - [ ] `Cache pruning to reduce memory usage`
+- [X] `Attack lookup tables`
 
 ## Gameplay screenshot
 ![Chess Game](resources/images/game.png)

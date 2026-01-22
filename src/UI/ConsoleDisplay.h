@@ -5,7 +5,7 @@
 
 class ConsoleDisplay : public IDisplay {
 public:
-    ConsoleDisplay(AI* ai) : IDisplay(), ai(ai) { }
+    ConsoleDisplay(AI* ai) : IDisplay(), ai(ai) {}
     void drawBoard(const ChessBoard& board) override;
     std::string receiveInput();
     void drawLoop(ChessBoard& board) override;
