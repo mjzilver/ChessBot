@@ -6,20 +6,10 @@
 #include "PieceType.h"
 
 class ChessBoard {
-private:
-    bool gameOver = false;
-
-    uint64_t whitePieces = 0;
-    uint64_t blackPieces = 0;
-    uint64_t pieces[6] = {0, 0, 0, 0, 0, 0};
-
-    uint64_t zobristTable[12][64];
-    uint64_t zobristSideToMove;
-
 public:
     ChessBoard() {
         resetBoard();
-        initializeZobristTable();
+        // initializeZobristTable();
     }
 
     std::mutex mtx;
@@ -39,7 +29,8 @@ public:
     void resetBoard();
     void emptyBoard();
     uint64_t getBoard() const { return whitePieces | blackPieces; }
-    uint64_t getPiecesBitmap(bool isWhite) const { return isWhite ? whitePieces : blackPieces; }
+    uint64_t getColorBitboard(bool isWhite) const;
+    uint64_t getPieceBitboard(PieceType pieceType, bool isWhite) const;
 
     // Zobrist hashing
     uint64_t getBoardHash(bool isWhiteTurn) const;
@@ -64,5 +55,13 @@ public:
     bool isValidAttack(int x, int y, int newX, int newY) const;
 
 private:
+    bool gameOver = false;
+
+    uint64_t whitePieces = 0;
+    uint64_t blackPieces = 0;
+    uint64_t pieces[6] = {0, 0, 0, 0, 0, 0};
+
+    uint64_t zobristTable[12][64];
+    uint64_t zobristSideToMove;
     void copyFrom(const ChessBoard& other);
 };

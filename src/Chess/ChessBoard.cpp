@@ -9,6 +9,8 @@
 /*
  * Bitboard usage:
  *  - index = x + y * 8   get the index
+ *  - x = idx & 7         get the x (file)
+ *  - y = idx >> 3        get the y (rank)
  *  - 1ULL << index       sets a bit at the square index
  *  - (board & mask)      checks if a square is occupied
  *  - board |= mask       adds a piece
@@ -97,6 +99,12 @@ void ChessBoard::emptyBoard() {
     pieces[BISHOP] = 0;
     pieces[QUEEN] = 0;
     pieces[KING] = 0;
+}
+
+uint64_t ChessBoard::getColorBitboard(bool isWhite) const { return isWhite ? whitePieces : blackPieces; }
+
+uint64_t ChessBoard::getPieceBitboard(PieceType pieceType, bool isWhite) const {
+    return pieces[pieceType] & getColorBitboard(isWhite);
 }
 
 char ChessBoard::getPieceSymbol(int x, int y) const { return pieceTypeToSymbol(getPieceTypeAt(x, y)); }

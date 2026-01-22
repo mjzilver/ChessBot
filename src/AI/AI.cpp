@@ -59,7 +59,6 @@ Move AI::findBestMove(const ChessBoard* const board, bool isWhite) {
         threadpool.submit([&, move]() {
             ChessBoard newBoard = board->clone();
 
-            auto captured = newBoard.getPieceTypeAt(move.toX, move.toY);
             newBoard.movePiece(move.fromX, move.fromY, move.toX, move.toY);
 
             bool nextIsWhite = !isWhite;
@@ -105,7 +104,7 @@ std::vector<Move> AI::generateMoves(const ChessBoard* const board, bool isWhite)
     }
 
     auto availableMoves = std::vector<Move>();
-    uint64_t boardPieces = board->getPiecesBitmap(isWhite);
+    uint64_t boardPieces = board->getColorBitboard(isWhite);
 
     while (boardPieces) {
         int index = ctz(boardPieces);
@@ -179,28 +178,41 @@ float AI::minimax(ChessBoard* const board, int depth, float alpha, float beta, b
 }
 
 float AI::evaluatePosition(const ChessBoard* const board) const {
-    float whiteScore = 0.0f;
-    float blackScore = 0.0f;
-
-    auto evaluatePieces = [&](uint64_t pieces, bool isWhite) {
+    auto evalColor = [&](bool isWhite) -> float {
         float score = 0.0f;
-        while (pieces) {
-            int index = ctz(pieces);
-            int x = index % 8;
-            int y = index / 8;
 
-            auto piece = board->getPieceTypeAt(x, y);
+        uint64_t pawns = board->getPieceBitboard(PAWN, isWhite);
+        uint64_t rooks = board->getPieceBitboard(ROOK, isWhite);
+        uint64_t knights = board->getPieceBitboard(KNIGHT, isWhite);
+        uint64_t bishops = board->getPieceBitboard(BISHOP, isWhite);
+        uint64_t queens = board->getPieceBitboard(QUEEN, isWhite);
+        uint64_t kings = board->getPieceBitboard(KING, isWhite);
 
-            score += getValueForPiece(piece);
-            score += piecePositionScore(x, y, piece, isWhite);
+        auto accumulatePieceScore = [&](uint64_t bits, PieceType piece) {
+            while (bits) {
+                int idx = ctz(bits);
+                int x = idx & 7;
+                int y = idx >> 3;
 
-            pieces &= pieces - 1;
-        }
+                score += getValueForPiece(piece);
+                score += piecePositionScore(x, y, piece, isWhite);
+
+                bits &= bits - 1;
+            }
+        };
+
+        accumulatePieceScore(pawns, PAWN);
+        accumulatePieceScore(rooks, ROOK);
+        accumulatePieceScore(knights, KNIGHT);
+        accumulatePieceScore(bishops, BISHOP);
+        accumulatePieceScore(queens, QUEEN);
+        accumulatePieceScore(kings, KING);
+
         return score;
     };
 
-    whiteScore = evaluatePieces(board->getPiecesBitmap(ChessBoard::WHITE), ChessBoard::WHITE);
-    blackScore = evaluatePieces(board->getPiecesBitmap(ChessBoard::BLACK), ChessBoard::BLACK);
+    float whiteScore = evalColor(ChessBoard::WHITE);
+    float blackScore = evalColor(ChessBoard::BLACK);
 
     float score = whiteScore - blackScore;
     return searchRootIsWhite ? score : -score;

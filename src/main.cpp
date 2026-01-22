@@ -11,6 +11,7 @@ int main() {
     AI ai(config.difficulty, config.timeLimit);
     IDisplay* display = nullptr;
     ChessBoard board;
+    board.initializeZobristTable();
 
     if (config.useGui) {
         display = new GDisplay(&ai);
