@@ -2,7 +2,6 @@
 
 #include <array>
 #include <cstdint>
-#include <cwchar>
 
 #include "../Utils/bits.h"
 #include "ChessBoard.h"
